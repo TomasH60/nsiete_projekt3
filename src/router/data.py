@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
 
+from router.cache import PROJECT_CACHE_DIR, datasets_cache_dir
 from router.labels import OOD, normalize_label
 
 logger = logging.getLogger(__name__)
@@ -113,6 +114,7 @@ def load_tabular_dataset(path: Union[str, Path]) -> DatasetSplit:
 def load_gqr_train_dataset() -> tuple[DatasetSplit, DatasetSplit]:
     """Load official GQR training/validation data when the package is installed."""
 
+    logger.info("Using project cache directory: %s", PROJECT_CACHE_DIR)
     try:
         import gqr  # type: ignore[import-not-found]
     except ImportError as exc:
@@ -155,15 +157,22 @@ def load_public_gqr_train_dataset() -> tuple[DatasetSplit, DatasetSplit]:
     from datasets import concatenate_datasets, load_dataset
     from sklearn.model_selection import train_test_split
 
+    cache_dir = str(datasets_cache_dir())
+    logger.info("Using Hugging Face datasets cache: %s", cache_dir)
+
     logger.info("Loading public law dataset: dim/law_stackexchange_prompts")
-    law_dataset = load_dataset("dim/law_stackexchange_prompts")["train"]
+    law_dataset = load_dataset(
+        "dim/law_stackexchange_prompts",
+        cache_dir=cache_dir,
+    )["train"]
 
     logger.info(
         "Loading public finance dataset: "
         "Marina-C/question-answer-Subject-Finance-Instruct"
     )
     finance_dataset = load_dataset(
-        "Marina-C/question-answer-Subject-Finance-Instruct"
+        "Marina-C/question-answer-Subject-Finance-Instruct",
+        cache_dir=cache_dir,
     )["train"]
 
     logger.info(
@@ -171,7 +180,8 @@ def load_public_gqr_train_dataset() -> tuple[DatasetSplit, DatasetSplit]:
         "iecjsu/lavita-ChatDoctor-HealthCareMagic-100k"
     )
     healthcare_dataset = load_dataset(
-        "iecjsu/lavita-ChatDoctor-HealthCareMagic-100k"
+        "iecjsu/lavita-ChatDoctor-HealthCareMagic-100k",
+        cache_dir=cache_dir,
     )["train"]
 
     law_filtered = law_dataset.filter(_has_nonempty_prompt)
@@ -259,6 +269,7 @@ def _extract_user_message(messages: list[dict[str, Any]]) -> str:
 def load_gqr_id_test_dataset() -> DatasetSplit:
     """Load official GQR in-domain test data when available."""
 
+    logger.info("Using project cache directory: %s", PROJECT_CACHE_DIR)
     try:
         import gqr  # type: ignore[import-not-found]
     except ImportError as exc:
@@ -271,6 +282,7 @@ def load_gqr_id_test_dataset() -> DatasetSplit:
 def load_gqr_ood_test_dataset() -> DatasetSplit:
     """Load official GQR OOD test data when available."""
 
+    logger.info("Using project cache directory: %s", PROJECT_CACHE_DIR)
     try:
         import gqr  # type: ignore[import-not-found]
     except ImportError as exc:
@@ -298,8 +310,15 @@ def load_public_ood_validation_dataset(max_samples: int = 1_000) -> DatasetSplit
         raise RuntimeError("datasets is required to load public OOD data") from exc
 
     try:
+        cache_dir = str(datasets_cache_dir())
+        logger.info("Using Hugging Face datasets cache: %s", cache_dir)
+
         logger.info("Loading public OOD dataset: Stanford/web_questions")
-        web_questions = load_dataset("Stanford/web_questions", split="test")
+        web_questions = load_dataset(
+            "Stanford/web_questions",
+            split="test",
+            cache_dir=cache_dir,
+        )
         web_questions = web_questions.map(
             lambda row: {
                 "text": str(row["question"]),
@@ -313,6 +332,7 @@ def load_public_ood_validation_dataset(max_samples: int = 1_000) -> DatasetSplit
         ml_questions = load_dataset(
             "mjphayes/machine_learning_questions",
             split="test",
+            cache_dir=cache_dir,
         )
         ml_questions = ml_questions.map(
             lambda row: {

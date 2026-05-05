@@ -11,10 +11,13 @@ import joblib
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 
+from router.cache import sentence_transformers_cache_dir
 from router.labels import ID_LABELS, OOD
 from router.metrics import evaluate_router, gqr_score
 
 logger = logging.getLogger(__name__)
+
+LOCAL_EMBEDDING_DIR = "embedding_model"
 
 
 @dataclass(frozen=True)
@@ -39,8 +42,10 @@ class SentenceTransformerEmbedder:
             ) from exc
 
         self.model_name = model_name
+        cache_dir = sentence_transformers_cache_dir()
         logger.info("Loading embedding model: %s", model_name)
-        self.model = SentenceTransformer(model_name)
+        logger.info("Using sentence-transformers cache: %s", cache_dir)
+        self.model = SentenceTransformer(model_name, cache_folder=str(cache_dir))
         logger.info("Embedding model loaded")
 
     def encode(self, texts: Sequence[str], batch_size: int = 64) -> np.ndarray:
@@ -52,6 +57,10 @@ class SentenceTransformerEmbedder:
             normalize_embeddings=True,
             show_progress_bar=len(texts) >= 512,
         )
+
+    def save(self, output_dir: Union[str, Path]) -> None:
+        logger.info("Saving embedding model to %s", output_dir)
+        self.model.save(str(output_dir))
 
 
 class DomainRouter:
@@ -217,11 +226,13 @@ class DomainRouter:
         return self.threshold
 
     def save(self, model_dir: Union[str, Path]) -> None:
-        """Persist classifier metadata. The embedding model is reloaded by name."""
+        """Persist classifier metadata and a local copy of the embedding model."""
 
         output_dir = Path(model_dir)
         logger.info("Saving router artifacts to %s", output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+        if self._embedder is not None:
+            self._embedder.save(output_dir / LOCAL_EMBEDDING_DIR)
         joblib.dump(
             {
                 "embedding_model": self.embedding_model,
@@ -233,9 +244,17 @@ class DomainRouter:
 
     @classmethod
     def load(cls, model_dir: Union[str, Path]) -> "DomainRouter":
-        payload = joblib.load(Path(model_dir) / "router.joblib")
+        input_dir = Path(model_dir)
+        payload = joblib.load(input_dir / "router.joblib")
+        local_embedding_dir = input_dir / LOCAL_EMBEDDING_DIR
+        embedding_model = payload["embedding_model"]
+        if local_embedding_dir.is_dir():
+            embedding_model = str(local_embedding_dir)
+            logger.info("Using local embedding model from %s", local_embedding_dir)
+        else:
+            logger.info("No local embedding model found; using %s", embedding_model)
         return cls(
-            embedding_model=payload["embedding_model"],
+            embedding_model=embedding_model,
             threshold=payload["threshold"],
             classifier=payload["classifier"],
         )

@@ -56,6 +56,23 @@ With the official GQR package installed:
 PYTHONPATH=src python -m router train --model-dir artifacts/router
 ```
 
+You can also run the same workflow interactively from
+`notebooks/router_baseline.ipynb`. The notebook keeps the model/data/metrics
+logic imported from `src/router` and uses notebook cells for configuration,
+training, evaluation, prediction inspection, and optional official GQR scoring.
+
+For the paper methodology experiment from
+`Efficient Few-Shot Learning Without Prompts`
+(https://arxiv.org/abs/2209.11055), use
+`notebooks/setfit_methodology.ipynb`. It adapts SetFit to this router task by
+sampling a few labeled examples per domain, fine-tuning a SentenceTransformer on
+contrastive text pairs, training a classifier head, and then adding an OOD
+confidence threshold.
+
+Downloaded Hugging Face datasets and embedding models are cached inside the
+project by default under `data/cache/`. Set `ROUTER_CACHE_DIR=/some/path` before
+running the CLI or notebook if you want to use a different cache location.
+
 If the official package cannot access its hard-coded finance dataset, training
 falls back to public Hugging Face datasets for the same three in-domain areas:
 `dim/law_stackexchange_prompts`,
@@ -101,6 +118,22 @@ Input files need one text-like column (`text`, `query`, `question`, `prompt`,
 
 ```bash
 PYTHONPATH=src python -m router predict \
+  --model-dir artifacts/router \
+  "Can my landlord keep my deposit after I move out?"
+```
+
+Training now saves a local copy of the embedding model into
+`artifacts/router/embedding_model`. For an older trained artifact, populate that
+folder once with:
+
+```bash
+PYTHONPATH=src python -m router cache-embedding --model-dir artifacts/router
+```
+
+After that, prediction can run without Hugging Face network checks:
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 PYTHONPATH=src python -m router --log-level WARNING predict \
   --model-dir artifacts/router \
   "Can my landlord keep my deposit after I move out?"
 ```

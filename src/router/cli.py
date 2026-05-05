@@ -56,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
     predict_parser.add_argument("text")
     predict_parser.add_argument("--model-dir", type=Path, default=Path("artifacts/router"))
 
+    cache_parser = subparsers.add_parser(
+        "cache-embedding",
+        help="save the router embedding model into the model directory",
+    )
+    cache_parser.add_argument("--model-dir", type=Path, default=Path("artifacts/router"))
+
     eval_parser = subparsers.add_parser("evaluate", help="evaluate on a labeled file")
     eval_parser.add_argument("path", type=Path)
     eval_parser.add_argument("--model-dir", type=Path, default=Path("artifacts/router"))
@@ -184,6 +190,15 @@ def predict(args: argparse.Namespace) -> None:
     )
 
 
+def cache_embedding(args: argparse.Namespace) -> None:
+    from router.model import DomainRouter
+
+    router = DomainRouter.load(args.model_dir)
+    router.embedder
+    router.save(args.model_dir)
+    print(f"Saved local embedding model to {args.model_dir / 'embedding_model'}")
+
+
 def evaluate(args: argparse.Namespace) -> None:
     from router.model import DomainRouter
 
@@ -230,6 +245,8 @@ def main() -> None:
         train(args)
     elif args.command == "predict":
         predict(args)
+    elif args.command == "cache-embedding":
+        cache_embedding(args)
     elif args.command == "evaluate":
         evaluate(args)
     elif args.command == "score-gqr":
