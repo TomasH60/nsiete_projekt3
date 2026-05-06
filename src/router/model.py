@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 
 from router.cache import sentence_transformers_cache_dir
 from router.labels import ID_LABELS, OOD
-from router.metrics import evaluate_router, gqr_score
+from router.metrics import evaluate_router
 
 logger = logging.getLogger(__name__)
 
@@ -285,9 +285,3 @@ class DomainRouter:
             best_label = int(class_labels[best_index])
             predictions.append(best_label if best_probability >= threshold else OOD)
         return predictions
-
-
-def score_from_accuracies(id_accuracy: float, ood_accuracy: float) -> float:
-    """Backward-compatible alias for notebooks."""
-
-    return gqr_score(id_accuracy, ood_accuracy)

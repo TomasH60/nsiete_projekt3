@@ -266,19 +266,6 @@ def _extract_user_message(messages: list[dict[str, Any]]) -> str:
     return ""
 
 
-def load_gqr_id_test_dataset() -> DatasetSplit:
-    """Load official GQR in-domain test data when available."""
-
-    logger.info("Using project cache directory: %s", PROJECT_CACHE_DIR)
-    try:
-        import gqr  # type: ignore[import-not-found]
-    except ImportError as exc:
-        raise RuntimeError("The official gqr package is not installed.") from exc
-
-    logger.info("Loading official GQR ID test dataset")
-    return normalize_frame(gqr.load_id_test_dataset())
-
-
 def load_gqr_ood_test_dataset() -> DatasetSplit:
     """Load official GQR OOD test data when available."""
 
