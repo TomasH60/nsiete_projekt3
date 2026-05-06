@@ -8,6 +8,15 @@ from typing import Optional, Union
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CACHE_DIR = PROJECT_ROOT / "data" / "cache"
+WINDOWS_CACHE_DIR = Path("C:/hf-cache/router")
+
+
+def _default_cache_dir() -> Path:
+    """Choose a cache root that avoids Windows path-length issues."""
+
+    if os.name == "nt":
+        return WINDOWS_CACHE_DIR
+    return DEFAULT_CACHE_DIR
 
 
 def configure_project_cache(
@@ -18,7 +27,7 @@ def configure_project_cache(
     root = Path(
         cache_dir
         if cache_dir is not None
-        else os.environ.get("ROUTER_CACHE_DIR", DEFAULT_CACHE_DIR)
+        else os.environ.get("ROUTER_CACHE_DIR", _default_cache_dir())
     ).expanduser()
     root = root.resolve()
 
